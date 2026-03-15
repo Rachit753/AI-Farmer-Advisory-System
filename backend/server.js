@@ -4,6 +4,7 @@ require("dotenv").config();
 
 const connectDB = require("./config/db");
 const aiRoutes = require("./routes/aiRoutes");
+const plantRoutes = require("./routes/plantRoutes");
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api", aiRoutes);
+app.use("/api", plantRoutes);
 
 app.get("/", (req, res) => {
   res.send("AI Farmer Advisory Backend Running");
