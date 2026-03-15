@@ -4,7 +4,9 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'dart:convert';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final String? initialQuestion;
+
+  const ChatScreen({super.key, this.initialQuestion});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -18,6 +20,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
   List messages = [];
 
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.initialQuestion != null) {
+      sendMessage(widget.initialQuestion!);
+    }
+  }
+
   Future sendMessage(String question) async {
     if (question.isEmpty) return;
 
@@ -28,7 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
     controller.clear();
 
     var response = await http.post(
-      Uri.parse("http://localhost:5000/api/ask-ai"),
+      Uri.parse("http://localhost:5000/api/ask"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "farmer_id": "69b67016036ad4d9da8b0537",
