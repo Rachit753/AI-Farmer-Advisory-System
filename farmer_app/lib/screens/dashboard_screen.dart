@@ -5,6 +5,7 @@ import 'plant_disease_screen.dart';
 import 'weather_screen.dart';
 import 'crop_recommendation_screen.dart';
 import 'history_screen.dart';
+import 'voice_assistant_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -95,7 +96,14 @@ class DashboardScreen extends StatelessWidget {
               );
             }),
 
-            buildButton(context, "Voice Assistant", Icons.mic, () {}),
+            buildButton(context, "Voice Assistant", Icons.mic, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const VoiceAssistantScreen(),
+                ),
+              );
+            }),
           ],
         ),
       ),
