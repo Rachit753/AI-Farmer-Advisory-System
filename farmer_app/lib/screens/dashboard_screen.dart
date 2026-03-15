@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import 'chat_screen.dart';
 import 'plant_disease_screen.dart';
 import 'weather_screen.dart';
+import 'crop_recommendation_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -69,12 +71,14 @@ class DashboardScreen extends StatelessWidget {
               );
             }),
 
-            buildButton(
-              context,
-              "Crop Recommendation",
-              Icons.agriculture,
-              () {},
-            ),
+            buildButton(context, "Crop Recommendation", Icons.agriculture, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CropRecommendationScreen(),
+                ),
+              );
+            }),
 
             buildButton(context, "Weather", Icons.cloud, () {
               Navigator.push(
