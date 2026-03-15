@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chat_screen.dart';
+import 'plant_disease_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -58,7 +59,14 @@ class DashboardScreen extends StatelessWidget {
               );
             }),
 
-            buildButton(context, "Plant Disease", Icons.local_florist, () {}),
+            buildButton(context, "Plant Disease", Icons.local_florist, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PlantDiseaseScreen(),
+                ),
+              );
+            }),
 
             buildButton(
               context,
