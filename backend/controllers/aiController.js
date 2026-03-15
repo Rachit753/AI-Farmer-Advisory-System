@@ -38,18 +38,26 @@ Farmer profile:
 Location: ${farmer?.location || "Unknown"}
 Soil Type: ${farmer?.soil_type || "Unknown"}
 Primary Crop: ${farmer?.primary_crop || "Unknown"}
+Preferred Language: ${farmer?.preferred_language || "English"}
 
-Answer the farmer question with advice specific to their region and crop.
+Answer the farmer question in the farmer's preferred language.
 
-Return response in JSON format:
+Supported languages:
+English
+Hindi
+Punjabi
+Telugu
+Malayalam
+
+Return response strictly in JSON format:
 
 {
-  "problem": "short description",
-  "possible_causes": ["cause1","cause2"],
-  "treatment": "solution",
-  "fertilizer": "recommended fertilizer",
-  "pesticide": "recommended pesticide",
-  "prevention": "prevention tips"
+"problem": "",
+"possible_causes": [],
+"treatment": "",
+"fertilizer": "",
+"pesticide": "",
+"prevention": ""
 }
 
 Rules:
