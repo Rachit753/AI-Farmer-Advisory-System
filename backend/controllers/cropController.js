@@ -1,4 +1,5 @@
 const Groq = require("groq-sdk");
+const Query = require("../models/Query");
 
 const groq = new Groq({
 apiKey: process.env.GROQ_API_KEY
@@ -26,7 +27,7 @@ Return ONLY valid JSON. Do not include explanation or text.
 Format:
 
 {
- "recommended_crops": ["crop1", "crop2", "crop3"]
+"recommended_crops": ["crop1", "crop2", "crop3"]
 }
 `;
 
@@ -39,12 +40,19 @@ Format:
 
     const result = completion.choices[0].message.content;
 
-// convert AI response string into JSON
+    // convert AI response string into JSON
     const parsedResult = JSON.parse(result);
-    
+
+    // Save query + response to database
+    await Query.create({
+    type: "crop_recommendation",
+    user_input: `${location} - ${soil_type} - ${season}`,
+    response: parsedResult
+    });
+
     res.json({
-        success: true,
-        recommended_crops: parsedResult.recommended_crops
+    success: true,
+    recommended_crops: parsedResult.recommended_crops
     });
 
 } catch (error) {

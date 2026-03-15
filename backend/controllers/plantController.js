@@ -1,5 +1,6 @@
 const OpenAI = require("openai");
 const fs = require("fs");
+const Query = require("../models/Query");
 
 const openai = new OpenAI({
 apiKey: process.env.OPENAI_API_KEY
@@ -9,7 +10,7 @@ exports.analyzePlant = async (req, res) => {
 try {
     const imagePath = req.file.path;
 
-    // convert image to base64
+    
     const imageBuffer = fs.readFileSync(imagePath);
     const base64Image = imageBuffer.toString("base64");
 
@@ -19,28 +20,28 @@ try {
         {
         role: "system",
         content: `
-                    You are an expert agricultural scientist.
+You are an expert agricultural scientist.
 
-                    Analyze plant images and identify diseases.
+Analyze plant images and identify diseases.
 
-                    Return the result strictly in this JSON format:
+Return the result strictly in this JSON format:
 
-                    {
-                        "disease": "name of disease",
-                        "cause": "reason for disease",
-                        "treatment": "recommended treatment or pesticide",
-                        "prevention": "how farmers can prevent it"
-                    }
+{
+"disease": "name of disease",
+"cause": "reason for disease",
+"treatment": "recommended treatment or pesticide",
+"prevention": "how farmers can prevent it"
+}
 
-                    If the plant looks healthy, return:
+If the plant looks healthy, return:
 
-                    {
-                        "disease": "Healthy Plant",
-                        "cause": "No disease detected",
-                        "treatment": "No treatment needed",
-                        "prevention": "Maintain proper watering and nutrients"
-                    }
-                        `
+{
+"disease": "Healthy Plant",
+"cause": "No disease detected",
+"treatment": "No treatment needed",
+"prevention": "Maintain proper watering and nutrients"
+}
+`
         },
         {
         role: "user",
@@ -62,6 +63,13 @@ try {
     });
 
     const result = response.choices[0].message.content;
+
+    
+    await Query.create({
+    type: "plant_disease",
+    user_input: "plant image",
+    response: result
+    });
 
     res.json({
     success: true,
