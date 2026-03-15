@@ -20,6 +20,7 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   String userSpeech = "";
   String aiResponse = "";
 
+  // UPDATED LISTENING FUNCTION
   Future startListening() async {
     bool available = await speech.initialize();
 
@@ -29,15 +30,20 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
       });
 
       speech.listen(
-        onResult: (result) {
+        localeId: "hi-IN", // Works best for Hindi + Hinglish
+        onResult: (result) async {
+          String spokenText = result.recognizedWords;
+
+          // Convert Hinglish → Hindi script
+          String correctedText = await convertToNativeScript(spokenText);
+
           setState(() {
-            userSpeech = result.recognizedWords;
+            userSpeech = correctedText;
           });
 
           if (result.finalResult) {
             stopListening();
-
-            askAI(userSpeech);
+            askAI(correctedText);
           }
         },
       );
@@ -72,20 +78,15 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
           """
 Problem: ${result["problem"]}
 
-Possible Causes:
-${result["possible_causes"].join(", ")}
+Possible Causes: ${result["possible_causes"].join(", ")}
 
-Treatment:
-${result["treatment"]}
+Treatment: ${result["treatment"]}
 
-Fertilizer:
-${result["fertilizer"]}
+Fertilizer: ${result["fertilizer"]}
 
-Pesticide:
-${result["pesticide"]}
+Pesticide: ${result["pesticide"]}
 
-Prevention:
-${result["prevention"]}
+Prevention: ${result["prevention"]}
 """;
 
       setState(() {
@@ -98,6 +99,26 @@ ${result["prevention"]}
         aiResponse = "Error connecting to AI service.";
       });
     }
+  }
+
+  // HINGLISH → NATIVE SCRIPT CONVERSION
+  Future<String> convertToNativeScript(String text) async {
+    var response = await http.post(
+      Uri.parse("http://localhost:5000/api/ask-ai"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "farmer_id": "69b67016036ad4d9da8b0537",
+        "question":
+            "Convert this to the correct native script without changing meaning: $text",
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      var data = jsonDecode(response.body);
+      return data["result"]["problem"] ?? text;
+    }
+
+    return text;
   }
 
   Future speak(String text) async {
@@ -125,10 +146,8 @@ ${result["prevention"]}
         title: const Text("Voice Assistant"),
         backgroundColor: Colors.green,
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(20),
-
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
