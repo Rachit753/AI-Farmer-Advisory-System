@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:speech_to_text/speech_to_text.dart';
 import 'dart:convert';
 
 class ChatScreen extends StatefulWidget {
@@ -11,12 +12,13 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController controller = TextEditingController();
+  final SpeechToText speech = SpeechToText();
+
+  bool isListening = false;
 
   List messages = [];
 
-  Future sendMessage() async {
-    String question = controller.text;
-
+  Future sendMessage(String question) async {
     if (question.isEmpty) return;
 
     setState(() {
@@ -26,7 +28,7 @@ class _ChatScreenState extends State<ChatScreen> {
     controller.clear();
 
     var response = await http.post(
-      Uri.parse("http://10.0.2.2:5000/api/ask"),
+      Uri.parse("http://localhost:5000/api/ask-ai"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "farmer_id": "69b67016036ad4d9da8b0537",
@@ -38,6 +40,32 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() {
       messages.add({"role": "ai", "text": data["result"]["treatment"]});
+    });
+  }
+
+  Future startListening() async {
+    bool available = await speech.initialize();
+
+    if (available) {
+      setState(() {
+        isListening = true;
+      });
+
+      speech.listen(
+        onResult: (result) {
+          setState(() {
+            controller.text = result.recognizedWords;
+          });
+        },
+      );
+    }
+  }
+
+  void stopListening() {
+    speech.stop();
+
+    setState(() {
+      isListening = false;
     });
   }
 
@@ -94,11 +122,25 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
 
-                const SizedBox(width: 10),
-
                 IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: sendMessage,
+                  onPressed: () {
+                    sendMessage(controller.text);
+                  },
+                ),
+
+                IconButton(
+                  icon: Icon(
+                    isListening ? Icons.mic : Icons.mic_none,
+                    color: Colors.green,
+                  ),
+                  onPressed: () {
+                    if (isListening) {
+                      stopListening();
+                    } else {
+                      startListening();
+                    }
+                  },
                 ),
               ],
             ),
