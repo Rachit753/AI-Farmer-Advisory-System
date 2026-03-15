@@ -1,0 +1,80 @@
+# ==============================
+
+# Node.js Backend
+
+# ==============================
+
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment variables
+
+.env
+.env.*
+
+# Logs
+
+logs
+*.log
+
+# Runtime data
+
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+
+coverage/
+
+# ==============================
+
+# Flutter / Dart
+
+# ==============================
+
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+ios/Pods/
+ios/.symlinks/
+android/.gradle/
+android/app/build/
+
+# Flutter generated files
+
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# ==============================
+
+# IDE / Editor
+
+# ==============================
+
+.vscode/
+.idea/
+*.iml
+
+# ==============================
+
+# OS Files
+
+# ==============================
+
+.DS_Store
+Thumbs.db
+
+# ==============================
+
+# Temporary files
+
+# ==============================
+
+*.tmp
+*.temp
