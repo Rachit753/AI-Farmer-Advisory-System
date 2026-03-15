@@ -1,5 +1,6 @@
 const Groq = require("groq-sdk");
 const Query = require("../models/Query");
+const Farmer = require("../models/Farmer");
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
@@ -8,9 +9,8 @@ const groq = new Groq({
 exports.askAI = async (req, res) => {
   try {
 
-    const { question } = req.body;
+    const { farmer_id, question } = req.body;
 
-    // Validate input
     if (!question) {
       return res.status(400).json({
         success: false,
@@ -18,7 +18,14 @@ exports.askAI = async (req, res) => {
       });
     }
 
-    // Call Groq AI
+    // Fetch farmer profile
+    let farmer = null;
+
+    if (farmer_id) {
+      farmer = await Farmer.findById(farmer_id);
+    }
+
+    // AI request
     const chatCompletion = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: [
@@ -27,22 +34,28 @@ exports.askAI = async (req, res) => {
           content: `
 You are an agricultural expert helping farmers.
 
-Answer farming questions in STRICT JSON format.
+Farmer profile:
+Location: ${farmer?.location || "Unknown"}
+Soil Type: ${farmer?.soil_type || "Unknown"}
+Primary Crop: ${farmer?.primary_crop || "Unknown"}
 
-Format:
+Answer the farmer question with advice specific to their region and crop.
+
+Return response in JSON format:
+
 {
-  "problem": "short description of the issue",
-  "possible_causes": ["cause1", "cause2", "cause3"],
-  "treatment": "recommended treatment",
-  "fertilizer": "recommended fertilizer if needed",
-  "pesticide": "recommended pesticide if needed",
-  "prevention": "how farmers can prevent this problem"
+  "problem": "short description",
+  "possible_causes": ["cause1","cause2"],
+  "treatment": "solution",
+  "fertilizer": "recommended fertilizer",
+  "pesticide": "recommended pesticide",
+  "prevention": "prevention tips"
 }
 
 Rules:
-Return ONLY JSON
-Do not include explanations outside JSON
-Keep language simple for farmers
+Return ONLY JSON.
+Do not include explanations outside JSON.
+Use simple language for farmers.
 `
         },
         {
@@ -52,13 +65,11 @@ Keep language simple for farmers
       ]
     });
 
-    // Get AI response
     const aiResponse =
       chatCompletion.choices?.[0]?.message?.content || "{}";
 
     let parsedResult;
 
-    // Try to parse AI JSON
     try {
       parsedResult = JSON.parse(aiResponse);
     } catch (err) {
@@ -74,14 +85,14 @@ Keep language simple for farmers
 
     }
 
-    // Save to MongoDB
+    // Save query history
     await Query.create({
+      farmer_id: farmer_id || null,
       type: "chat",
       user_input: question,
       response: parsedResult
     });
 
-    // Send response
     res.json({
       success: true,
       result: parsedResult
