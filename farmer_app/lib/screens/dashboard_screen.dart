@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'chat_screen.dart';
 import 'plant_disease_screen.dart';
+import 'weather_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -75,7 +76,12 @@ class DashboardScreen extends StatelessWidget {
               () {},
             ),
 
-            buildButton(context, "Weather", Icons.cloud, () {}),
+            buildButton(context, "Weather", Icons.cloud, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const WeatherScreen()),
+              );
+            }),
 
             buildButton(context, "History", Icons.history, () {}),
 
