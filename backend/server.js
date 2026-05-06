@@ -10,6 +10,7 @@ const weatherRoutes = require("./routes/weatherRoutes");
 const cropRoutes = require("./routes/cropRoutes");
 const historyRoutes = require("./routes/historyRoutes");
 const farmerRoutes = require("./routes/farmerRoutes");
+const cityRoutes = require("./routes/cityRoutes");
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use("/api", weatherRoutes);
 app.use("/api", cropRoutes);
 app.use("/api", historyRoutes);
 app.use("/api", farmerRoutes);
+app.use("/api", cityRoutes);
 
 app.get("/", (req, res) => {
   res.send("AI Farmer Advisory Backend Running");

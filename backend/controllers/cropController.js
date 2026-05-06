@@ -2,66 +2,127 @@ const Groq = require("groq-sdk");
 const Query = require("../models/Query");
 
 const groq = new Groq({
-apiKey: process.env.GROQ_API_KEY
+  apiKey: process.env.GROQ_API_KEY,
 });
 
-exports.cropRecommendation = async (req, res) => {
-try {
+exports.cropRecommendation =
+  async (req, res) => {
+    try {
+      const {
+        location,
+        soil_type,
+        season,
+        language,
+      } = req.body;
 
-    const { location, soil_type, season } = req.body;
-
-    const prompt = `
+      const prompt = `
 You are an agricultural expert.
 
-A farmer provides the following information:
-
+Farmer Details:
 Location: ${location}
 Soil Type: ${soil_type}
 Season: ${season}
 
-Suggest the best crops the farmer should grow.
+Suggest best crops.
 
-IMPORTANT:
-Return ONLY valid JSON. Do not include explanation or text.
+IMPORTANT RULES:
+1. Return ONLY valid JSON.
+2. Do NOT write explanation outside JSON.
+3. Crop names must be in ${language}.
+4. Use native language script.
 
-Format:
+JSON format:
 
 {
-"recommended_crops": ["crop1", "crop2", "crop3"]
+  "recommended_crops": [
+    "crop1",
+    "crop2",
+    "crop3"
+  ]
 }
 `;
 
-    const completion = await groq.chat.completions.create({
-    model: "llama-3.1-8b-instant",
-    messages: [
-        { role: "user", content: prompt }
-    ]
-    });
+      const completion =
+        await groq.chat.completions.create({
+          model:
+            "llama-3.1-8b-instant",
 
-    const result = completion.choices[0].message.content;
+          temperature: 0,
 
-    // convert AI response string into JSON
-    const parsedResult = JSON.parse(result);
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+        });
 
-    // Save query + response to database
-    await Query.create({
-    type: "crop_recommendation",
-    user_input: `${location} - ${soil_type} - ${season}`,
-    response: parsedResult
-    });
+      let result =
+        completion.choices[0].message
+          .content;
 
-    res.json({
-    success: true,
-    recommended_crops: parsedResult.recommended_crops
-    });
+      console.log(
+        "AI RAW RESPONSE:",
+        result,
+      );
 
-} catch (error) {
+      result = result.trim();
 
-    console.error("Crop AI Error:", error);
+      result = result.replace(
+        /```json/g,
+        "",
+      );
 
-    res.status(500).json({
-    success: false,
-    message: "Crop recommendation failed"
-    });
-}
-};
+      result = result.replace(
+        /```/g,
+        "",
+      );
+
+      let parsedResult;
+
+      try {
+        parsedResult =
+          JSON.parse(result);
+      } catch (err) {
+        console.log(
+          "JSON Parse Failed",
+        );
+
+        parsedResult = {
+          recommended_crops: [
+            result,
+          ],
+        };
+      }
+
+      await Query.create({
+        type:
+          "crop_recommendation",
+
+        user_input:
+          `${location} - ${soil_type} - ${season}`,
+
+        response: parsedResult,
+      });
+
+      res.json({
+        success: true,
+
+        recommended_crops:
+          parsedResult
+            .recommended_crops ||
+          [],
+      });
+    } catch (error) {
+      console.error(
+        "Crop AI Error:",
+        error,
+      );
+
+      res.status(500).json({
+        success: false,
+        message:
+          "Crop recommendation failed",
+      });
+    }
+  };

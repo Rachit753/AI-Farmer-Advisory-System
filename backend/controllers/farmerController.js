@@ -1,55 +1,86 @@
 const Farmer = require("../models/Farmer");
 
 exports.registerFarmer = async (req, res) => {
+  try {
+    const {
+      name,
+      phone,
+      state,
+      city,
+      location,
+      soil_type,
+      primary_crop,
+      preferred_language,
+    } = req.body;
 
-try {
+    let farmer = await Farmer.findOne({ phone });
 
-    const { name, phone, location, soil_type, primary_crop } = req.body;
+    if (farmer) {
+      farmer.preferred_language = preferred_language;
+      farmer.state = state;
+      farmer.city = city;
+      farmer.location = location;
 
-    const farmer = await Farmer.create({
-    name,
-    phone,
-    location,
-    soil_type,
-    primary_crop
-    });
+      await farmer.save();
+    } else {
+      farmer = await Farmer.create({
+        name,
+        phone,
+        state,
+        city,
+        location,
+        soil_type,
+        primary_crop,
+        preferred_language,
+      });
+    }
 
     res.json({
-    success: true,
-    farmer
+      success: true,
+      farmer,
     });
-
-} catch (error) {
-
+  } catch (error) {
     console.error(error);
 
     res.status(500).json({
-    success: false,
-    message: "Farmer registration failed"
+      success: false,
+      message: "Farmer registration failed",
     });
-
-}
-
+  }
 };
 
 exports.getFarmerProfile = async (req, res) => {
-
-try {
-
+  try {
     const farmer = await Farmer.findById(req.params.id);
 
     res.json({
-    success: true,
-    farmer
+      success: true,
+      farmer,
     });
-
-} catch (error) {
-
+  } catch (error) {
     res.status(500).json({
-    success: false,
-    message: "Profile fetch failed"
+      success: false,
+      message: "Profile fetch failed",
     });
+  }
+};
 
-}
+exports.updateFarmerProfile = async (req, res) => {
+  try {
+    const farmer = await Farmer.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
 
+    res.json({
+      success: true,
+      farmer,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Profile update failed",
+    });
+  }
 };

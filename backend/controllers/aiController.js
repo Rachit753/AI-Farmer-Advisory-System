@@ -3,117 +3,211 @@ const Query = require("../models/Query");
 const Farmer = require("../models/Farmer");
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 exports.askAI = async (req, res) => {
   try {
-
-    const { farmer_id, question } = req.body;
+    const {
+      farmer_id,
+      question,
+      language,
+      voice_mode,
+    } = req.body;
 
     if (!question) {
       return res.status(400).json({
         success: false,
-        message: "Question is required"
+        message:
+          "Question is required",
       });
     }
 
-    // Fetch farmer profile
     let farmer = null;
 
     if (farmer_id) {
-      farmer = await Farmer.findById(farmer_id);
+      farmer =
+        await Farmer.findById(
+          farmer_id,
+        );
     }
 
-    // AI request
-    const chatCompletion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        {
-          role: "system",
-          content: `
-You are an agricultural expert helping farmers.
+    const preferredLanguage =
+      language ||
+      farmer?.preferred_language ||
+      "English";
 
-Farmer profile:
+    const completion =
+      await groq.chat.completions.create({
+        model:
+          "llama-3.1-8b-instant",
+
+        temperature: 0.4,
+
+        messages: [
+          {
+            role: "system",
+
+            content: `
+You are an expert agriculture advisor helping farmers.
+
+Farmer details:
 Location: ${farmer?.location || "Unknown"}
+State: ${farmer?.state || "Unknown"}
+City: ${farmer?.city || "Unknown"}
 Soil Type: ${farmer?.soil_type || "Unknown"}
 Primary Crop: ${farmer?.primary_crop || "Unknown"}
-Preferred Language: ${farmer?.preferred_language || "English"}
+Preferred Language: ${preferredLanguage}
 
-Answer the farmer question in the farmer's preferred language.
+IMPORTANT RULES:
 
-Supported languages:
-English
-Hindi
-Punjabi
-Telugu
-Malayalam
+1. Reply ONLY in ${preferredLanguage}.
+2. Use native script of the language.
+3. Never use English transliteration.
+4. Punjabi must use Gurmukhi script.
+5. Hindi must use Devanagari script.
+6. Telugu must use Telugu script.
+7. Malayalam must use Malayalam script.
+8. Use simple farmer friendly language.
+9. No markdown.
+10. No explanations outside JSON.
+11. Response should sound natural and human.
+12. Keep sentences short and easy to understand.
 
-Return response strictly in JSON format:
+If voice_mode is true:
+- Speak conversationally like a farming expert.
+- Avoid robotic formatting.
+- Make response natural for speech.
+
+Return ONLY valid JSON in this format:
 
 {
-"problem": "",
-"possible_causes": [],
-"treatment": "",
-"fertilizer": "",
-"pesticide": "",
-"prevention": ""
+  "problem": "",
+  "possible_causes": [],
+  "treatment": "",
+  "fertilizer": "",
+  "pesticide": "",
+  "prevention": ""
 }
+`,
+          },
 
-Rules:
-Return ONLY JSON.
-Do not include explanations outside JSON.
-Use simple language for farmers.
-`
-        },
-        {
-          role: "user",
-          content: question
-        }
-      ]
-    });
+          {
+            role: "user",
+            content: question,
+          },
+        ],
+      });
 
-    const aiResponse =
-      chatCompletion.choices?.[0]?.message?.content || "{}";
+    let aiResponse =
+      completion.choices?.[0]
+        ?.message?.content || "{}";
+
+    aiResponse =
+      aiResponse.replace(
+        /```json/g,
+        "",
+      );
+
+    aiResponse =
+      aiResponse.replace(
+        /```/g,
+        "",
+      );
+
+    aiResponse = aiResponse.trim();
 
     let parsedResult;
 
     try {
-      parsedResult = JSON.parse(aiResponse);
+      parsedResult =
+        JSON.parse(aiResponse);
     } catch (err) {
+      console.log(
+        "JSON Parse Error:",
+        err,
+      );
 
       parsedResult = {
         problem: question,
-        possible_causes: [],
-        treatment: aiResponse,
-        fertilizer: "Not specified",
-        pesticide: "Not specified",
-        prevention: "Follow good farming practices"
-      };
 
+        possible_causes: [],
+
+        treatment: aiResponse,
+
+        fertilizer:
+          preferredLanguage ===
+          "Hindi"
+              ? "उल्लेख नहीं"
+              : preferredLanguage ===
+                "Punjabi"
+              ? "ਉਲੇਖ ਨਹੀਂ"
+              : preferredLanguage ===
+                "Telugu"
+              ? "పేర్కొనలేదు"
+              : preferredLanguage ===
+                "Malayalam"
+              ? "പരാമർശിച്ചിട്ടില്ല"
+              : "Not specified",
+
+        pesticide:
+          preferredLanguage ===
+          "Hindi"
+              ? "उल्लेख नहीं"
+              : preferredLanguage ===
+                "Punjabi"
+              ? "ਉਲੇਖ ਨਹੀਂ"
+              : preferredLanguage ===
+                "Telugu"
+              ? "పేర్కొనలేదు"
+              : preferredLanguage ===
+                "Malayalam"
+              ? "പരാമർശിച്ചിട്ടില്ല"
+              : "Not specified",
+
+        prevention:
+          preferredLanguage ===
+          "Hindi"
+              ? "अच्छी खेती पद्धतियों का पालन करें"
+              : preferredLanguage ===
+                "Punjabi"
+              ? "ਚੰਗੀਆਂ ਖੇਤੀ ਪੱਧਤੀਆਂ ਦੀ ਪਾਲਣਾ ਕਰੋ"
+              : preferredLanguage ===
+                "Telugu"
+              ? "మంచి వ్యవసాయ పద్ధతులను అనుసరించండి"
+              : preferredLanguage ===
+                "Malayalam"
+              ? "നല്ല കൃഷി രീതികൾ പിന്തുടരുക"
+              : "Follow good farming practices",
+      };
     }
 
-    // Save query history
     await Query.create({
-      farmer_id: farmer_id || null,
+      farmer_id:
+        farmer_id || null,
+
       type: "chat",
+
       user_input: question,
-      response: parsedResult
+
+      response: parsedResult,
     });
 
     res.json({
       success: true,
-      result: parsedResult
+
+      result: parsedResult,
     });
-
   } catch (error) {
-
-    console.error("Groq Error:", error);
+    console.error(
+      "AI Error:",
+      error,
+    );
 
     res.status(500).json({
       success: false,
-      message: "AI response failed"
+      message:
+        "AI response failed",
     });
-
   }
 };
