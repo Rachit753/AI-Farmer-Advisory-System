@@ -1,6 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+
+import 'package:animate_do/animate_do.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../services/translation_service.dart';
+import '../widgets/glass_container.dart';
 
 class WeatherScreen extends StatefulWidget {
   const WeatherScreen({super.key});
@@ -11,143 +18,393 @@ class WeatherScreen extends StatefulWidget {
 
 class _WeatherScreenState extends State<WeatherScreen> {
   Map weatherData = {};
+
   bool loading = false;
 
   final TextEditingController cityController = TextEditingController();
 
+  String language = "English";
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadLanguage();
+  }
+
+  Future loadLanguage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      language = prefs.getString("language") ?? "English";
+    });
+  }
+
+  Future<List<String>> searchCities(String query) async {
+    if (query.trim().isEmpty) {
+      return [];
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+          "https://ai-farmer-advisory-backend.onrender.com/api/city-search?q=$query",
+        ),
+      );
+
+      if (response.statusCode != 200) {
+        return [];
+      }
+
+      final List data = jsonDecode(response.body);
+
+      return data.map<String>((item) {
+        return "${item["name"]}, ${item["state"]}, ${item["country"]}";
+      }).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future fetchWeather(String city) async {
+    if (city.trim().isEmpty) return;
+
+    String finalCity = city.split(",")[0];
+
     setState(() {
       loading = true;
     });
 
-    var response = await http.get(
-      Uri.parse("http://localhost:5000/api/weather?city=$city"),
-    );
+    try {
+      var response = await http.get(
+        Uri.parse(
+          "https://ai-farmer-advisory-backend.onrender.com/api/weather?city=${Uri.encodeComponent(finalCity)}&language=$language",
+        ),
+      );
 
-    var data = jsonDecode(response.body);
+      var data = jsonDecode(response.body);
 
-    setState(() {
-      weatherData = data;
-      loading = false;
-    });
-
-    checkWeatherAlert(data);
+      setState(() {
+        weatherData = data;
+        loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        loading = false;
+      });
+    }
   }
 
-  void checkWeatherAlert(Map data) {
-    String weather = data["weather"].toLowerCase();
-    double temp = data["temperature"];
+  Widget weatherInfoCard({
+    required String title,
+    required String value,
+    required IconData icon,
+  }) {
+    return Expanded(
+      child: GlassContainer(
+        borderRadius: 22,
 
-    if (weather.contains("rain") ||
-        weather.contains("storm") ||
-        weather.contains("wind") ||
-        temp > 40 ||
-        temp < 5) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text("Weather Alert ⚠️"),
-          content: Text(
-            "Weather condition today: ${data["weather"]}\n\n${data["farming_advice"]}",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("OK"),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.white, size: 32),
+
+            const SizedBox(height: 12),
+
+            Text(
+              title,
+
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+
+                fontSize: 14,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              value,
+
+              style: const TextStyle(
+                color: Colors.white,
+
+                fontSize: 18,
+
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
-      );
-    }
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Weather Advisory"),
-        backgroundColor: Colors.green,
-      ),
+      body: Stack(
+        children: [
+          SizedBox.expand(
+            child: Image.asset("assets/images/weather.jpg", fit: BoxFit.cover),
+          ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+          Container(color: Colors.black.withOpacity(0.6)),
 
-        child: Column(
-          children: [
-            TextField(
-              controller: cityController,
-              decoration: const InputDecoration(
-                labelText: "Enter City",
-                border: OutlineInputBorder(),
-              ),
-            ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
 
-            const SizedBox(height: 10),
+              child: Column(
+                children: [
+                  FadeInDown(
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
 
-            ElevatedButton(
-              onPressed: () {
-                fetchWeather(cityController.text);
-              },
-              child: const Text("Check Weather"),
-            ),
+                          child: GlassContainer(
+                            borderRadius: 18,
 
-            const SizedBox(height: 20),
+                            padding: const EdgeInsets.all(10),
 
-            loading
-                ? const CircularProgressIndicator()
-                : weatherData.isEmpty
-                ? const Text("Enter a city to see weather")
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "City: ${weatherData["city"]}",
-                        style: const TextStyle(fontSize: 20),
+                            child: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 18),
+
+                        Text(
+                          TranslationService.getText(language, "weather"),
+
+                          style: const TextStyle(
+                            color: Colors.white,
+
+                            fontSize: 28,
+
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  FadeInDown(
+                    delay: const Duration(milliseconds: 200),
+
+                    child: GlassContainer(
+                      child: Column(
+                        children: [
+                          TypeAheadField<String>(
+                            suggestionsCallback: (pattern) async {
+                              return await searchCities(pattern);
+                            },
+
+                            itemBuilder: (context, suggestion) {
+                              return ListTile(
+                                title: Text(
+                                  suggestion,
+
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              );
+                            },
+
+                            onSelected: (suggestion) {
+                              cityController.text = suggestion;
+                            },
+
+                            builder: (context, controller, focusNode) {
+                              controller.text = cityController.text;
+
+                              return TextField(
+                                controller: controller,
+
+                                focusNode: focusNode,
+
+                                style: const TextStyle(color: Colors.white),
+
+                                decoration: InputDecoration(
+                                  hintText: TranslationService.getText(
+                                    language,
+                                    "enter_city",
+                                  ),
+
+                                  border: InputBorder.none,
+                                ),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          SizedBox(
+                            width: double.infinity,
+
+                            height: 55,
+
+                            child: ElevatedButton(
+                              onPressed: () {
+                                fetchWeather(cityController.text);
+                              },
+
+                              child: Text(
+                                TranslationService.getText(
+                                  language,
+                                  "check_weather",
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                  ),
 
-                      const SizedBox(height: 10),
+                  const SizedBox(height: 30),
 
-                      Text(
-                        "Temperature: ${weatherData["temperature"]} °C",
-                        style: const TextStyle(fontSize: 18),
-                      ),
+                  if (loading) const CircularProgressIndicator(),
 
-                      const SizedBox(height: 10),
+                  if (weatherData.isNotEmpty)
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: FadeInUp(
+                          child: Column(
+                            children: [
+                              GlassContainer(
+                                child: Column(
+                                  children: [
+                                    const Icon(
+                                      Icons.cloud,
+                                      size: 80,
+                                      color: Colors.white,
+                                    ),
 
-                      Text(
-                        "Humidity: ${weatherData["humidity"]} %",
-                        style: const TextStyle(fontSize: 18),
-                      ),
+                                    const SizedBox(height: 10),
 
-                      const SizedBox(height: 10),
+                                    Text(
+                                      weatherData["city"],
 
-                      Text(
-                        "Weather: ${weatherData["weather"]}",
-                        style: const TextStyle(fontSize: 18),
-                      ),
+                                      style: const TextStyle(
+                                        color: Colors.white,
 
-                      const SizedBox(height: 20),
+                                        fontSize: 30,
 
-                      const Text(
-                        "Farming Advice",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 10),
+
+                                    Text(
+                                      "${weatherData["temperature"]}°C",
+
+                                      style: const TextStyle(
+                                        color: Colors.white,
+
+                                        fontSize: 55,
+
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+
+                                    Text(
+                                      weatherData["weather"],
+
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.8),
+
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              Row(
+                                children: [
+                                  weatherInfoCard(
+                                    title: TranslationService.getText(
+                                      language,
+                                      "humidity",
+                                    ),
+
+                                    value: "${weatherData["humidity"]}%",
+
+                                    icon: Icons.water_drop,
+                                  ),
+
+                                  const SizedBox(width: 15),
+
+                                  weatherInfoCard(
+                                    title: TranslationService.getText(
+                                      language,
+                                      "temperature",
+                                    ),
+
+                                    value: "${weatherData["temperature"]}°C",
+
+                                    icon: Icons.thermostat,
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              GlassContainer(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+
+                                  children: [
+                                    Text(
+                                      TranslationService.getText(
+                                        language,
+                                        "farming_advice",
+                                      ),
+
+                                      style: const TextStyle(
+                                        color: Colors.white,
+
+                                        fontSize: 22,
+
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 15),
+
+                                    Text(
+                                      weatherData["farming_advice"],
+
+                                      style: const TextStyle(
+                                        color: Colors.white,
+
+                                        fontSize: 16,
+
+                                        height: 1.6,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-
-                      const SizedBox(height: 10),
-
-                      Text(
-                        weatherData["farming_advice"],
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ],
-                  ),
-          ],
-        ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

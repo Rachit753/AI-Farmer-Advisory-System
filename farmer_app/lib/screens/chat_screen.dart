@@ -1,7 +1,13 @@
+import 'dart:convert';
+
+import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart';
-import 'dart:convert';
+
+import '../services/translation_service.dart';
+import '../widgets/glass_container.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? initialQuestion;
@@ -14,44 +20,89 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController controller = TextEditingController();
+
   final SpeechToText speech = SpeechToText();
 
   bool isListening = false;
 
+  bool loading = false;
+
   List messages = [];
+
+  String language = "English";
 
   @override
   void initState() {
     super.initState();
+
+    loadLanguage();
 
     if (widget.initialQuestion != null) {
       sendMessage(widget.initialQuestion!);
     }
   }
 
+  Future loadLanguage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      language = prefs.getString("language") ?? "English";
+    });
+  }
+
   Future sendMessage(String question) async {
-    if (question.isEmpty) return;
+    if (question.trim().isEmpty) return;
 
     setState(() {
       messages.add({"role": "user", "text": question});
+
+      loading = true;
     });
 
     controller.clear();
 
-    var response = await http.post(
-      Uri.parse("http://localhost:5000/api/ask"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "farmer_id": "69b67016036ad4d9da8b0537",
-        "question": question,
-      }),
-    );
+    try {
+      var response = await http.post(
+        Uri.parse("https://ai-farmer-advisory-backend.onrender.com/api/ask-ai"),
 
-    var data = jsonDecode(response.body);
+        headers: {"Content-Type": "application/json"},
 
-    setState(() {
-      messages.add({"role": "ai", "text": data["result"]["treatment"]});
-    });
+        body: jsonEncode({
+          "farmer_id": "69b67016036ad4d9da8b0537",
+
+          "question": question,
+
+          "language": language,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+
+        var result = data["result"];
+
+        String formattedResponse =
+            """
+${result["problem"]}
+
+${result["treatment"]}
+
+${result["fertilizer"]}
+
+${result["prevention"]}
+""";
+
+        setState(() {
+          messages.add({"role": "ai", "text": formattedResponse});
+
+          loading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        loading = false;
+      });
+    }
   }
 
   Future startListening() async {
@@ -83,18 +134,72 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget messageBubble(message) {
     bool isUser = message["role"] == "user";
 
-    return Container(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      padding: const EdgeInsets.all(10),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isUser ? Colors.green : Colors.grey[300],
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(
-          message["text"],
-          style: TextStyle(color: isUser ? Colors.white : Colors.black),
+    return FadeInUp(
+      child: Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.78,
+          ),
+
+          child: GlassContainer(
+            borderRadius: 24,
+
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+
+                      backgroundColor: isUser
+                          ? Colors.green
+                          : Colors.white.withOpacity(0.2),
+
+                      child: Icon(
+                        isUser ? Icons.person : Icons.smart_toy,
+
+                        color: Colors.white,
+
+                        size: 18,
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    Text(
+                      isUser ? "You" : "Agri AI",
+
+                      style: const TextStyle(
+                        color: Colors.white,
+
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 15),
+
+                Text(
+                  message["text"],
+
+                  style: const TextStyle(
+                    color: Colors.white,
+
+                    fontSize: 16,
+
+                    height: 1.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -103,55 +208,156 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("AI Farmer Assistant"),
-        backgroundColor: Colors.green,
-      ),
+      resizeToAvoidBottomInset: true,
 
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                return messageBubble(messages[index]);
-              },
-            ),
+          SizedBox.expand(
+            child: Image.asset("assets/images/chat.jpg", fit: BoxFit.cover),
           ),
 
-          Container(
-            padding: const EdgeInsets.all(10),
-            child: Row(
+          Container(color: Colors.black.withOpacity(0.65)),
+
+          SafeArea(
+            child: Column(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      hintText: "Ask about crops...",
-                      border: OutlineInputBorder(),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+
+                  child: FadeInDown(
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+
+                          child: GlassContainer(
+                            borderRadius: 18,
+
+                            padding: const EdgeInsets.all(10),
+
+                            child: const Icon(
+                              Icons.arrow_back,
+
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 18),
+
+                        Text(
+                          TranslationService.getText(language, "ask_ai"),
+
+                          style: const TextStyle(
+                            color: Colors.white,
+
+                            fontSize: 28,
+
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
 
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: () {
-                    sendMessage(controller.text);
-                  },
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(20),
+
+                    itemCount: messages.length,
+
+                    itemBuilder: (context, index) {
+                      return messageBubble(messages[index]);
+                    },
+                  ),
                 ),
 
-                IconButton(
-                  icon: Icon(
-                    isListening ? Icons.mic : Icons.mic_none,
-                    color: Colors.green,
+                if (loading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 10),
+
+                    child: CircularProgressIndicator(),
                   ),
-                  onPressed: () {
-                    if (isListening) {
-                      stopListening();
-                    } else {
-                      startListening();
-                    }
-                  },
+
+                Padding(
+                  padding: const EdgeInsets.all(16),
+
+                  child: GlassContainer(
+                    borderRadius: 30,
+
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: controller,
+
+                            style: const TextStyle(color: Colors.white),
+
+                            decoration: InputDecoration(
+                              hintText: language == "Hindi"
+                                  ? "अपना सवाल पूछें..."
+                                  : "Ask farming question...",
+
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.7),
+                              ),
+
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+
+                        GestureDetector(
+                          onTap: () {
+                            if (isListening) {
+                              stopListening();
+                            } else {
+                              startListening();
+                            }
+                          },
+
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+
+                              shape: BoxShape.circle,
+                            ),
+
+                            child: Icon(
+                              isListening ? Icons.mic : Icons.mic_none,
+
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 10),
+
+                        GestureDetector(
+                          onTap: () {
+                            sendMessage(controller.text);
+                          },
+
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+
+                              shape: BoxShape.circle,
+                            ),
+
+                            child: const Icon(Icons.send, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),

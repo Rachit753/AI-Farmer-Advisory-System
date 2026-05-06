@@ -1,115 +1,137 @@
-# ==============================
+# ==========================================
+# ROOT
+# ==========================================
 
-# Node.js Backend
-
-# ==============================
-
-node_modules/
+*.log
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment variables
+# ==========================================
+# ENV FILES
+# ==========================================
 
 .env
 .env.*
+!.env.example
 
-# Logs
+# ==========================================
+# NODE.JS BACKEND
+# ==========================================
 
-logs
-*.log
+node_modules/
+package-lock.json
 
-# Runtime files
+coverage/
 
 pids
 *.pid
 *.seed
 *.pid.lock
 
-coverage/
+# uploads / temp files
+uploads/
+tmp/
+temp/
 
-# ==============================
-
-# Flutter / Dart
-
-# ==============================
-
-# Dart tool
+# ==========================================
+# FLUTTER / DART
+# ==========================================
 
 .dart_tool/
-
-# Pub dependencies
-
 .packages
-.pub-cache/
 .pub/
-
-# Build folders
+.pub-cache/
 
 build/
 **/build/
-
-# Flutter generated
 
 .flutter-plugins
 .flutter-plugins-dependencies
 .metadata
 
-# ==============================
+# Generated
+generated_plugin_registrant.dart
 
-# Android
-
-# ==============================
+# ==========================================
+# ANDROID
+# ==========================================
 
 **/android/.gradle/
 **/android/local.properties
 **/android/app/build/
+**/android/key.properties
 
-# ==============================
+# Keystore files
+*.jks
+*.keystore
 
-# iOS
-
-# ==============================
+# ==========================================
+# IOS
+# ==========================================
 
 **/ios/Pods/
 **/ios/.symlinks/
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
+**/ios/Flutter/ephemeral/
 
-# ==============================
+# ==========================================
+# WEB
+# ==========================================
 
-# macOS / Linux / Windows
+.flutter-plugins
+.flutter-plugins-dependencies
 
-# ==============================
+# ==========================================
+# WINDOWS / LINUX / MACOS
+# ==========================================
 
 **/macos/Flutter/ephemeral/
 **/linux/flutter/ephemeral/
 **/windows/flutter/ephemeral/
 
-# ==============================
-
-# IDE / Editors
-
-# ==============================
+# ==========================================
+# IDE / EDITOR
+# ==========================================
 
 .vscode/
 .idea/
 *.iml
 
-# ==============================
-
-# OS Files
-
-# ==============================
+# ==========================================
+# OS FILES
+# ==========================================
 
 .DS_Store
 Thumbs.db
 
-# ==============================
-
-# Temporary files
-
-# ==============================
+# ==========================================
+# TEMP FILES
+# ==========================================
 
 *.tmp
 *.temp
+*.bak
+*.swp
+
+# ==========================================
+# FIREBASE
+# ==========================================
+
+firebase-debug.log
+firebase-debug.*.log
+
+# ==========================================
+# RENDER / DEPLOYMENT
+# ==========================================
+
+.render/
+.vercel/
+
+# ==========================================
+# CACHE
+# ==========================================
+
+.cache/
