@@ -18,18 +18,14 @@ exports.askAI = async (req, res) => {
     if (!question) {
       return res.status(400).json({
         success: false,
-        message:
-          "Question is required",
+        message: "Question is required",
       });
     }
 
     let farmer = null;
 
     if (farmer_id) {
-      farmer =
-        await Farmer.findById(
-          farmer_id,
-        );
+      farmer = await Farmer.findById(farmer_id);
     }
 
     const preferredLanguage =
@@ -39,8 +35,7 @@ exports.askAI = async (req, res) => {
 
     const completion =
       await groq.chat.completions.create({
-        model:
-          "llama-3.1-8b-instant",
+        model: "llama-3.1-8b-instant",
 
         temperature: 0.4,
 
@@ -73,13 +68,16 @@ IMPORTANT RULES:
 10. No explanations outside JSON.
 11. Response should sound natural and human.
 12. Keep sentences short and easy to understand.
+13. NEVER translate JSON keys.
+14. Keep JSON field names ALWAYS in English.
+15. Translate ONLY the values.
 
 If voice_mode is true:
 - Speak conversationally like a farming expert.
 - Avoid robotic formatting.
 - Make response natural for speech.
 
-Return ONLY valid JSON in this format:
+Return ONLY valid JSON in this EXACT format:
 
 {
   "problem": "",
@@ -88,6 +86,17 @@ Return ONLY valid JSON in this format:
   "fertilizer": "",
   "pesticide": "",
   "prevention": ""
+}
+
+Example Hindi response:
+
+{
+  "problem": "गेहूं में कीड़े लगना",
+  "possible_causes": ["भूमि की गुणवत्ता खराब"],
+  "treatment": "कीड़े नाशक दवाओं का उपयोग करें",
+  "fertilizer": "जैविक खाद का उपयोग करें",
+  "pesticide": "फॉर्मलिन",
+  "prevention": "बीज की गुणवत्ता जांचें"
 }
 `,
           },
@@ -100,33 +109,68 @@ Return ONLY valid JSON in this format:
       });
 
     let aiResponse =
-      completion.choices?.[0]
-        ?.message?.content || "{}";
+      completion.choices?.[0]?.message?.content || "{}";
 
-    aiResponse =
-      aiResponse.replace(
-        /```json/g,
-        "",
-      );
-
-    aiResponse =
-      aiResponse.replace(
-        /```/g,
-        "",
-      );
-
+    aiResponse = aiResponse.replace(/```json/g, "");
+    aiResponse = aiResponse.replace(/```/g, "");
     aiResponse = aiResponse.trim();
 
     let parsedResult;
 
     try {
-      parsedResult =
-        JSON.parse(aiResponse);
+      parsedResult = JSON.parse(aiResponse);
+
+      parsedResult = {
+        problem:
+          parsedResult.problem ||
+          parsedResult["समस्या"] ||
+          parsedResult["ਸਮੱਸਿਆ"] ||
+          parsedResult["సమస్య"] ||
+          parsedResult["പ്രശ്നം"] ||
+          "",
+
+        possible_causes:
+          parsedResult.possible_causes ||
+          parsedResult["संभावित कारण"] ||
+          parsedResult["ਸੰਭਾਵਿਤ ਕਾਰਨ"] ||
+          parsedResult["సంభావ్య కారణాలు"] ||
+          parsedResult["സാധ്യമായ കാരണങ്ങൾ"] ||
+          [],
+
+        treatment:
+          parsedResult.treatment ||
+          parsedResult["उपचार"] ||
+          parsedResult["ਚਿਕਿਤ्सा"] ||
+          parsedResult["చికిత్స"] ||
+          parsedResult["ചികിത്സ"] ||
+          "",
+
+        fertilizer:
+          parsedResult.fertilizer ||
+          parsedResult["खाद"] ||
+          parsedResult["ਖਾਦ"] ||
+          parsedResult["ఎరువు"] ||
+          parsedResult["വളം"] ||
+          "",
+
+        pesticide:
+          parsedResult.pesticide ||
+          parsedResult["कीटनाशक"] ||
+          parsedResult["ਕੀਟਨਾਸ਼ਕ"] ||
+          parsedResult["పురుగుమందు"] ||
+          parsedResult["കീടനാശിനി"] ||
+          "",
+
+        prevention:
+          parsedResult.prevention ||
+          parsedResult["रोकथाम"] ||
+          parsedResult["ਰੋਕਥਾਮ"] ||
+          parsedResult["నివారణ"] ||
+          parsedResult["പ്രതിരോധം"] ||
+          "",
+      };
     } catch (err) {
-      console.log(
-        "JSON Parse Error:",
-        err,
-      );
+      console.log("JSON Parse Error:", err);
 
       parsedResult = {
         problem: question,
@@ -136,55 +180,42 @@ Return ONLY valid JSON in this format:
         treatment: aiResponse,
 
         fertilizer:
-          preferredLanguage ===
-          "Hindi"
+          preferredLanguage === "Hindi"
               ? "उल्लेख नहीं"
-              : preferredLanguage ===
-                "Punjabi"
+              : preferredLanguage === "Punjabi"
               ? "ਉਲੇਖ ਨਹੀਂ"
-              : preferredLanguage ===
-                "Telugu"
+              : preferredLanguage === "Telugu"
               ? "పేర్కొనలేదు"
-              : preferredLanguage ===
-                "Malayalam"
+              : preferredLanguage === "Malayalam"
               ? "പരാമർശിച്ചിട്ടില്ല"
               : "Not specified",
 
         pesticide:
-          preferredLanguage ===
-          "Hindi"
+          preferredLanguage === "Hindi"
               ? "उल्लेख नहीं"
-              : preferredLanguage ===
-                "Punjabi"
+              : preferredLanguage === "Punjabi"
               ? "ਉਲੇਖ ਨਹੀਂ"
-              : preferredLanguage ===
-                "Telugu"
+              : preferredLanguage === "Telugu"
               ? "పేర్కొనలేదు"
-              : preferredLanguage ===
-                "Malayalam"
+              : preferredLanguage === "Malayalam"
               ? "പരാമർശിച്ചിട്ടില്ല"
               : "Not specified",
 
         prevention:
-          preferredLanguage ===
-          "Hindi"
+          preferredLanguage === "Hindi"
               ? "अच्छी खेती पद्धतियों का पालन करें"
-              : preferredLanguage ===
-                "Punjabi"
+              : preferredLanguage === "Punjabi"
               ? "ਚੰਗੀਆਂ ਖੇਤੀ ਪੱਧਤੀਆਂ ਦੀ ਪਾਲਣਾ ਕਰੋ"
-              : preferredLanguage ===
-                "Telugu"
+              : preferredLanguage === "Telugu"
               ? "మంచి వ్యవసాయ పద్ధతులను అనుసరించండి"
-              : preferredLanguage ===
-                "Malayalam"
+              : preferredLanguage === "Malayalam"
               ? "നല്ല കൃഷി രീതികൾ പിന്തുടരുക"
               : "Follow good farming practices",
       };
     }
 
     await Query.create({
-      farmer_id:
-        farmer_id || null,
+      farmer_id: farmer_id || null,
 
       type: "chat",
 
@@ -199,15 +230,11 @@ Return ONLY valid JSON in this format:
       result: parsedResult,
     });
   } catch (error) {
-    console.error(
-      "AI Error:",
-      error,
-    );
+    console.error("AI Error:", error);
 
     res.status(500).json({
       success: false,
-      message:
-        "AI response failed",
+      message: "AI response failed",
     });
   }
 };
