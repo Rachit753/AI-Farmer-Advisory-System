@@ -1,44 +1,55 @@
 const mongoose = require("mongoose");
 
-const farmerSchema = new mongoose.Schema({
-  name: {
-    type: String,
+const farmerSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      default: "",
+    },
+
+    phone: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
+    state: {
+      type: String,
+      default: "",
+    },
+
+    city: {
+      type: String,
+      default: "",
+    },
+
+    location: {
+      type: String,
+      default: "",
+    },
+
+    soil_type: {
+      type: String,
+      default: "",
+    },
+
+    primary_crop: {
+      type: String,
+      default: "",
+    },
+
+    preferred_language: {
+      type: String,
+      default: "English",
+    },
   },
 
-  phone: {
-    type: String,
-    required: true,
-  },
+  {
+    timestamps: true,
+  }
+);
 
-  state: {
-    type: String,
-  },
-
-  city: {
-    type: String,
-  },
-
-  location: {
-    type: String,
-  },
-
-  soil_type: {
-    type: String,
-  },
-
-  primary_crop: {
-    type: String,
-  },
-
-  preferred_language: {
-    type: String,
-    default: "English",
-  },
-
-  created_at: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
-module.exports = mongoose.model("Farmer", farmerSchema);
+module.exports = mongoose.model(
+  "Farmer",
+  farmerSchema
+);

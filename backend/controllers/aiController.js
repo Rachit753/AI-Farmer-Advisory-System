@@ -15,7 +15,7 @@ exports.askAI = async (req, res) => {
       voice_mode,
     } = req.body;
 
-    if (!question) {
+    if (!question || question.trim() === "") {
       return res.status(400).json({
         success: false,
         message: "Question is required",
@@ -28,16 +28,37 @@ exports.askAI = async (req, res) => {
       farmer = await Farmer.findById(farmer_id);
     }
 
-    const preferredLanguage =
-      language ||
+    let preferredLanguage =
+      language?.trim() ||
       farmer?.preferred_language ||
       "English";
+
+    preferredLanguage =
+      preferredLanguage.charAt(0).toUpperCase() +
+      preferredLanguage.slice(1).toLowerCase();
+
+    const languageInstruction =
+      preferredLanguage === "English"
+        ? `
+IMPORTANT:
+- Reply ONLY in proper English.
+- Never use Hindi words.
+- Never use Hinglish.
+- Never mix regional words.
+- Use only pure English sentences.
+`
+        : `
+IMPORTANT:
+- Reply ONLY in ${preferredLanguage}.
+- Use native script of ${preferredLanguage}.
+- Never use English transliteration.
+`;
 
     const completion =
       await groq.chat.completions.create({
         model: "llama-3.1-8b-instant",
 
-        temperature: 0.4,
+        temperature: 0.3,
 
         messages: [
           {
@@ -52,32 +73,29 @@ State: ${farmer?.state || "Unknown"}
 City: ${farmer?.city || "Unknown"}
 Soil Type: ${farmer?.soil_type || "Unknown"}
 Primary Crop: ${farmer?.primary_crop || "Unknown"}
+
 Preferred Language: ${preferredLanguage}
 
-IMPORTANT RULES:
+${languageInstruction}
 
-1. Reply ONLY in ${preferredLanguage}.
-2. Use native script of the language.
-3. Never use English transliteration.
-4. Punjabi must use Gurmukhi script.
-5. Hindi must use Devanagari script.
-6. Telugu must use Telugu script.
-7. Malayalam must use Malayalam script.
-8. Use simple farmer friendly language.
-9. No markdown.
-10. No explanations outside JSON.
-11. Response should sound natural and human.
-12. Keep sentences short and easy to understand.
-13. NEVER translate JSON keys.
-14. Keep JSON field names ALWAYS in English.
-15. Translate ONLY the values.
+GLOBAL RULES:
+
+1. Keep JSON keys ALWAYS in English.
+2. Translate ONLY the values.
+3. Return ONLY valid JSON.
+4. No markdown.
+5. No explanations outside JSON.
+6. Use simple farmer-friendly language.
+7. Keep sentences short.
+8. Response should sound natural and human.
+9. Never translate JSON field names.
 
 If voice_mode is true:
-- Speak conversationally like a farming expert.
+- Speak conversationally.
 - Avoid robotic formatting.
 - Make response natural for speech.
 
-Return ONLY valid JSON in this EXACT format:
+Return ONLY this exact JSON structure:
 
 {
   "problem": "",
@@ -86,17 +104,6 @@ Return ONLY valid JSON in this EXACT format:
   "fertilizer": "",
   "pesticide": "",
   "prevention": ""
-}
-
-Example Hindi response:
-
-{
-  "problem": "गेहूं में कीड़े लगना",
-  "possible_causes": ["भूमि की गुणवत्ता खराब"],
-  "treatment": "कीड़े नाशक दवाओं का उपयोग करें",
-  "fertilizer": "जैविक खाद का उपयोग करें",
-  "pesticide": "फॉर्मलिन",
-  "prevention": "बीज की गुणवत्ता जांचें"
 }
 `,
           },
@@ -111,9 +118,10 @@ Example Hindi response:
     let aiResponse =
       completion.choices?.[0]?.message?.content || "{}";
 
-    aiResponse = aiResponse.replace(/```json/g, "");
-    aiResponse = aiResponse.replace(/```/g, "");
-    aiResponse = aiResponse.trim();
+    aiResponse = aiResponse
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
 
     let parsedResult;
 
@@ -181,36 +189,36 @@ Example Hindi response:
 
         fertilizer:
           preferredLanguage === "Hindi"
-              ? "उल्लेख नहीं"
-              : preferredLanguage === "Punjabi"
-              ? "ਉਲੇਖ ਨਹੀਂ"
-              : preferredLanguage === "Telugu"
-              ? "పేర్కొనలేదు"
-              : preferredLanguage === "Malayalam"
-              ? "പരാമർശിച്ചിട്ടില്ല"
-              : "Not specified",
+            ? "उल्लेख नहीं"
+            : preferredLanguage === "Punjabi"
+            ? "ਉਲੇਖ ਨਹੀਂ"
+            : preferredLanguage === "Telugu"
+            ? "పేర్కొనలేదు"
+            : preferredLanguage === "Malayalam"
+            ? "പരാമർശിച്ചിട്ടില്ല"
+            : "Not specified",
 
         pesticide:
           preferredLanguage === "Hindi"
-              ? "उल्लेख नहीं"
-              : preferredLanguage === "Punjabi"
-              ? "ਉਲੇਖ ਨਹੀਂ"
-              : preferredLanguage === "Telugu"
-              ? "పేర్కొనలేదు"
-              : preferredLanguage === "Malayalam"
-              ? "പരാമർശിച്ചിട്ടില്ല"
-              : "Not specified",
+            ? "उल्लेख नहीं"
+            : preferredLanguage === "Punjabi"
+            ? "ਉਲੇਖ ਨਹੀਂ"
+            : preferredLanguage === "Telugu"
+            ? "పేర్కొనలేదు"
+            : preferredLanguage === "Malayalam"
+            ? "പരാമർശിച്ചിട്ടില്ല"
+            : "Not specified",
 
         prevention:
           preferredLanguage === "Hindi"
-              ? "अच्छी खेती पद्धतियों का पालन करें"
-              : preferredLanguage === "Punjabi"
-              ? "ਚੰਗੀਆਂ ਖੇਤੀ ਪੱਧਤੀਆਂ ਦੀ ਪਾਲਣਾ ਕਰੋ"
-              : preferredLanguage === "Telugu"
-              ? "మంచి వ్యవసాయ పద్ధతులను అనుసరించండి"
-              : preferredLanguage === "Malayalam"
-              ? "നല്ല കൃഷി രീതികൾ പിന്തുടരുക"
-              : "Follow good farming practices",
+            ? "अच्छी खेती पद्धतियों का पालन करें"
+            : preferredLanguage === "Punjabi"
+            ? "ਚੰਗੀਆਂ ਖੇਤੀ ਪੱਧਤੀਆਂ ਦੀ ਪਾਲਣਾ ਕਰੋ"
+            : preferredLanguage === "Telugu"
+            ? "మంచి వ్యవసాయ పద్ధతులను అనుసరించండి"
+            : preferredLanguage === "Malayalam"
+            ? "നല്ല കൃഷി രീതികൾ പിന്തുടരുക"
+            : "Follow good farming practices",
       };
     }
 
