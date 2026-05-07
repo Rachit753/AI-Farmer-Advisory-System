@@ -8,6 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/glass_container.dart';
 import 'dashboard_screen.dart';
 
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -112,6 +115,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
       await auth.signInWithCredential(credential);
 
+      var response = await http.post(
+        Uri.parse(
+          "https://ai-farmer-advisory-backend.onrender.com/api/auth/login",
+        ),
+
+        headers: {"Content-Type": "application/json"},
+
+        body: jsonEncode({
+          "phone": phoneController.text,
+
+          "state": stateController.text,
+
+          "city": cityController.text,
+
+          "language": selectedLanguage,
+        }),
+      );
+
+      var data = jsonDecode(response.body);
+
       SharedPreferences prefs = await SharedPreferences.getInstance();
 
       await prefs.setBool("isLoggedIn", true);
@@ -124,6 +147,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
       await prefs.setString("city", cityController.text);
 
+      await prefs.setString("farmer_id", data["farmer_id"]);
+
+      print("Farmer ID Saved: ${data["farmer_id"]}");
+
+      setState(() {
+        loading = false;
+      });
+
       if (!mounted) return;
 
       Navigator.pushReplacement(
@@ -131,6 +162,8 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     } catch (e) {
+      print("Login Error: $e");
+
       setState(() {
         loading = false;
       });

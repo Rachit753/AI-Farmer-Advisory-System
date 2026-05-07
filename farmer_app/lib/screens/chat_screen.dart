@@ -62,13 +62,17 @@ class _ChatScreenState extends State<ChatScreen> {
     controller.clear();
 
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+
+      String farmerId = prefs.getString("farmer_id") ?? "";
+
       var response = await http.post(
         Uri.parse("https://ai-farmer-advisory-backend.onrender.com/api/ask-ai"),
 
         headers: {"Content-Type": "application/json"},
 
         body: jsonEncode({
-          "farmer_id": "69b67016036ad4d9da8b0537",
+          "farmer_id": farmerId,
 
           "question": question,
 
@@ -97,9 +101,23 @@ ${result["prevention"]}
 
           loading = false;
         });
+      } else {
+        setState(() {
+          messages.add({
+            "role": "ai",
+            "text": "Failed to get response from server.",
+          });
+
+          loading = false;
+        });
       }
     } catch (e) {
       setState(() {
+        messages.add({
+          "role": "ai",
+          "text": "Something went wrong. Please try again.",
+        });
+
         loading = false;
       });
     }
@@ -322,7 +340,7 @@ ${result["prevention"]}
                           child: Container(
                             padding: const EdgeInsets.all(12),
 
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: Colors.green,
 
                               shape: BoxShape.circle,
@@ -346,7 +364,7 @@ ${result["prevention"]}
                           child: Container(
                             padding: const EdgeInsets.all(12),
 
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: Colors.green,
 
                               shape: BoxShape.circle,

@@ -1,1 +1,0 @@
-# AI-Farmer-Advisory-System

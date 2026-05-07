@@ -1,9 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:speech_to_text/speech_to_text.dart';
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:animate_do/animate_do.dart';
 import 'dart:convert';
+
+import 'package:animate_do/animate_do.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../services/language_service.dart';
 import '../services/translation_service.dart';
@@ -23,6 +26,8 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
 
   bool isListening = false;
 
+  bool isSpeaking = false;
+
   String userSpeech = "";
   String aiResponse = "";
 
@@ -31,7 +36,38 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   @override
   void initState() {
     super.initState();
+
     loadLanguage();
+
+    initializeTTS();
+  }
+
+  Future initializeTTS() async {
+    await tts.awaitSpeakCompletion(true);
+
+    tts.setStartHandler(() {
+      if (mounted) {
+        setState(() {
+          isSpeaking = true;
+        });
+      }
+    });
+
+    tts.setCompletionHandler(() {
+      if (mounted) {
+        setState(() {
+          isSpeaking = false;
+        });
+      }
+    });
+
+    tts.setCancelHandler(() {
+      if (mounted) {
+        setState(() {
+          isSpeaking = false;
+        });
+      }
+    });
   }
 
   Future loadLanguage() async {
@@ -79,13 +115,17 @@ class _VoiceAssistantScreenState extends State<VoiceAssistantScreen> {
   Future askAI(String question) async {
     String language = await LanguageService.getLanguage();
 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    String farmerId = prefs.getString("farmer_id") ?? "";
+
     var response = await http.post(
       Uri.parse("https://ai-farmer-advisory-backend.onrender.com/api/ask-ai"),
 
       headers: {"Content-Type": "application/json"},
 
       body: jsonEncode({
-        "farmer_id": "69b67016036ad4d9da8b0537",
+        "farmer_id": farmerId,
 
         "question": question,
 
@@ -126,9 +166,15 @@ ${result["prevention"]}
   Future speak(String text) async {
     String locale = await LanguageService.getSpeechLocale();
 
+    await tts.stop();
+
     await tts.setLanguage(locale);
 
-    await tts.setSpeechRate(1);
+    if (kIsWeb) {
+      await tts.setSpeechRate(0.85);
+    } else {
+      await tts.setSpeechRate(0.45);
+    }
 
     await tts.setPitch(1.0);
 
@@ -164,15 +210,17 @@ ${result["prevention"]}
 
               const SizedBox(width: 10),
 
-              Text(
-                title,
+              Expanded(
+                child: Text(
+                  title,
 
-                style: const TextStyle(
-                  color: Colors.white,
+                  style: const TextStyle(
+                    color: Colors.white,
 
-                  fontSize: 18,
+                    fontSize: 18,
 
-                  fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -236,22 +284,26 @@ ${result["prevention"]}
 
                         const SizedBox(width: 18),
 
-                        Text(
-                          TranslationService.getText(language, "voice"),
+                        Expanded(
+                          child: Text(
+                            TranslationService.getText(language, "voice"),
 
-                          style: const TextStyle(
-                            color: Colors.white,
+                            overflow: TextOverflow.ellipsis,
 
-                            fontSize: 28,
+                            style: const TextStyle(
+                              color: Colors.white,
 
-                            fontWeight: FontWeight.bold,
+                              fontSize: 28,
+
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 35),
 
                   FadeInUp(
                     child: GestureDetector(
@@ -303,7 +355,7 @@ ${result["prevention"]}
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 25),
 
                   Text(
                     language == "Hindi"
@@ -327,7 +379,7 @@ ${result["prevention"]}
                     ),
                   ),
 
-                  const SizedBox(height: 35),
+                  const SizedBox(height: 30),
 
                   Expanded(
                     child: SingleChildScrollView(
@@ -369,55 +421,60 @@ ${result["prevention"]}
 
                           const SizedBox(height: 25),
 
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.redAccent,
+                          if (isSpeaking)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.redAccent,
 
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
+
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(18),
+                                      ),
                                     ),
 
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(18),
-                                    ),
-                                  ),
+                                    onPressed: () async {
+                                      await tts.stop();
 
-                                  onPressed: () async {
-                                    await tts.stop();
-                                  },
+                                      setState(() {
+                                        isSpeaking = false;
+                                      });
+                                    },
 
-                                  icon: const Icon(
-                                    Icons.stop_circle,
+                                    icon: const Icon(
+                                      Icons.stop_circle,
 
-                                    color: Colors.white,
-                                  ),
-
-                                  label: Text(
-                                    language == "Hindi"
-                                        ? "आवाज़ रोकें"
-                                        : language == "Punjabi"
-                                        ? "ਆਵਾਜ਼ ਰੋਕੋ"
-                                        : language == "Telugu"
-                                        ? "వాయిస్ ఆపండి"
-                                        : language == "Malayalam"
-                                        ? "ശബ്ദം നിർത്തുക"
-                                        : "Stop Voice",
-
-                                    style: const TextStyle(
                                       color: Colors.white,
+                                    ),
 
-                                      fontSize: 16,
+                                    label: Text(
+                                      language == "Hindi"
+                                          ? "आवाज़ रोकें"
+                                          : language == "Punjabi"
+                                          ? "ਆਵਾਜ਼ ਰੋਕੋ"
+                                          : language == "Telugu"
+                                          ? "వాయిస్ ఆపండి"
+                                          : language == "Malayalam"
+                                          ? "ശബ്ദം നിർത്തുക"
+                                          : "Stop Voice",
 
-                                      fontWeight: FontWeight.bold,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+
+                                        fontSize: 16,
+
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
                         ],
                       ),
                     ),

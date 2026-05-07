@@ -45,6 +45,8 @@ class _CropRecommendationScreenState extends State<CropRecommendationScreen> {
   }
 
   Future getRecommendation() async {
+    await loadLanguage();
+
     setState(() {
       loading = true;
     });
@@ -58,11 +60,11 @@ class _CropRecommendationScreenState extends State<CropRecommendationScreen> {
         headers: {"Content-Type": "application/json"},
 
         body: jsonEncode({
-          "location": locationController.text,
+          "location": locationController.text.trim(),
 
-          "soil_type": soilController.text,
+          "soil_type": soilController.text.trim(),
 
-          "season": seasonController.text,
+          "season": seasonController.text.trim(),
 
           "language": language,
         }),
@@ -79,6 +81,10 @@ class _CropRecommendationScreenState extends State<CropRecommendationScreen> {
       setState(() {
         loading = false;
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to get recommendation")),
+      );
     }
   }
 
@@ -110,6 +116,8 @@ class _CropRecommendationScreenState extends State<CropRecommendationScreen> {
           borderRadius: 24,
 
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+
             children: [
               Container(
                 padding: const EdgeInsets.all(14),
@@ -133,12 +141,18 @@ class _CropRecommendationScreenState extends State<CropRecommendationScreen> {
                 child: Text(
                   crop,
 
+                  maxLines: 3,
+
+                  overflow: TextOverflow.ellipsis,
+
                   style: const TextStyle(
                     color: Colors.white,
 
-                    fontSize: 18,
+                    fontSize: 17,
 
                     fontWeight: FontWeight.bold,
+
+                    height: 1.5,
                   ),
                 ),
               ),
@@ -163,11 +177,14 @@ class _CropRecommendationScreenState extends State<CropRecommendationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
+
       body: Stack(
         children: [
           SizedBox.expand(
             child: Image.asset(
               "assets/images/recommendation.jpg",
+
               fit: BoxFit.cover,
             ),
           ),
@@ -203,101 +220,121 @@ class _CropRecommendationScreenState extends State<CropRecommendationScreen> {
 
                         const SizedBox(width: 18),
 
-                        Text(
-                          TranslationService.getText(language, "crop"),
+                        Expanded(
+                          child: Text(
+                            TranslationService.getText(language, "crop"),
 
-                          style: const TextStyle(
-                            color: Colors.white,
+                            overflow: TextOverflow.ellipsis,
 
-                            fontSize: 28,
+                            style: const TextStyle(
+                              color: Colors.white,
 
-                            fontWeight: FontWeight.bold,
+                              fontSize: 28,
+
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 25),
 
-                  FadeInDown(
-                    delay: const Duration(milliseconds: 200),
-
-                    child: GlassContainer(
+                  Expanded(
+                    child: SingleChildScrollView(
                       child: Column(
                         children: [
-                          buildField(
-                            hint: "Location",
+                          FadeInDown(
+                            delay: const Duration(milliseconds: 200),
 
-                            controller: locationController,
-                          ),
+                            child: GlassContainer(
+                              child: Column(
+                                children: [
+                                  buildField(
+                                    hint: "Location",
 
-                          const SizedBox(height: 20),
+                                    controller: locationController,
+                                  ),
 
-                          buildField(
-                            hint: "Soil Type",
+                                  const SizedBox(height: 20),
 
-                            controller: soilController,
-                          ),
+                                  buildField(
+                                    hint: "Soil Type",
 
-                          const SizedBox(height: 20),
+                                    controller: soilController,
+                                  ),
 
-                          buildField(
-                            hint: "Season (Rabi/Kharif)",
+                                  const SizedBox(height: 20),
 
-                            controller: seasonController,
+                                  buildField(
+                                    hint: "Season (Rabi/Kharif)",
+
+                                    controller: seasonController,
+                                  ),
+
+                                  const SizedBox(height: 25),
+
+                                  SizedBox(
+                                    width: double.infinity,
+
+                                    height: 55,
+
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            18,
+                                          ),
+                                        ),
+                                      ),
+
+                                      onPressed: getRecommendation,
+
+                                      child: const Text(
+                                        "Get Recommendation",
+
+                                        style: TextStyle(
+                                          color: Colors.white,
+
+                                          fontSize: 16,
+
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
 
                           const SizedBox(height: 25),
 
-                          SizedBox(
-                            width: double.infinity,
-
-                            height: 55,
-
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                              ),
-
-                              onPressed: getRecommendation,
-
-                              child: const Text(
-                                "Get Recommendation",
-
-                                style: TextStyle(
-                                  color: Colors.white,
-
-                                  fontSize: 16,
-
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                          if (loading)
+                            const Padding(
+                              padding: EdgeInsets.all(20),
+                              child: CircularProgressIndicator(),
                             ),
-                          ),
+
+                          if (!loading)
+                            ListView.builder(
+                              shrinkWrap: true,
+
+                              physics: const NeverScrollableScrollPhysics(),
+
+                              itemCount: crops.length,
+
+                              itemBuilder: (context, index) {
+                                return cropCard(crops[index].toString());
+                              },
+                            ),
                         ],
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 25),
-
-                  if (loading) const CircularProgressIndicator(),
-
-                  if (!loading)
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: crops.length,
-
-                        itemBuilder: (context, index) {
-                          return cropCard(crops[index]);
-                        },
-                      ),
-                    ),
                 ],
               ),
             ),

@@ -63,9 +63,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
 
+            mainAxisSize: MainAxisSize.min,
+
             children: [
               Container(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(16),
 
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -75,20 +77,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
 
-                child: Icon(icon, size: 34, color: Colors.white),
+                child: Icon(icon, size: 30, color: Colors.white),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
 
-              Text(
-                title,
+              Flexible(
+                child: Text(
+                  title,
 
-                textAlign: TextAlign.center,
+                  maxLines: 2,
 
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  overflow: TextOverflow.ellipsis,
+
+                  textAlign: TextAlign.center,
+
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -106,6 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           SizedBox.expand(
             child: Image.asset(
               "assets/images/dashboard.jpg",
+
               fit: BoxFit.cover,
             ),
           ),
@@ -114,10 +123,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
+
                 end: Alignment.bottomCenter,
 
                 colors: [
                   Colors.black.withOpacity(0.55),
+
                   Colors.green.withOpacity(0.35),
                 ],
               ),
@@ -172,6 +183,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onTap: () async {
                             await Navigator.push(
                               context,
+
                               MaterialPageRoute(
                                 builder: (_) => const ProfileScreen(),
                               ),
@@ -225,6 +237,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               gradient: LinearGradient(
                                 colors: [
                                   Colors.green.shade400,
+
                                   Colors.green.shade800,
                                 ],
                               ),
@@ -232,7 +245,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                             child: const Icon(
                               Icons.agriculture,
+
                               color: Colors.white,
+
                               size: 35,
                             ),
                           ),
@@ -286,7 +301,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       mainAxisSpacing: 18,
 
-                      childAspectRatio: 0.95,
+                      childAspectRatio: 1.08,
 
                       children: [
                         buildDashboardCard(
@@ -299,6 +314,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
+
                               MaterialPageRoute(
                                 builder: (_) => const ChatScreen(),
                               ),
@@ -319,6 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
+
                               MaterialPageRoute(
                                 builder: (_) => const WeatherScreen(),
                               ),
@@ -336,6 +353,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
+
                               MaterialPageRoute(
                                 builder: (_) =>
                                     const CropRecommendationScreen(),
@@ -354,6 +372,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
+
                               MaterialPageRoute(
                                 builder: (_) => const PlantDiseaseScreen(),
                               ),
@@ -371,6 +390,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
+
                               MaterialPageRoute(
                                 builder: (_) => const VoiceAssistantScreen(),
                               ),
@@ -391,6 +411,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
+
                               MaterialPageRoute(
                                 builder: (_) => const HistoryScreen(),
                               ),
