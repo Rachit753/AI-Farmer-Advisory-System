@@ -1,5 +1,4 @@
 const OpenAI = require("openai");
-const fs = require("fs");
 const Query = require("../models/Query");
 
 const openai = new OpenAI({
@@ -8,13 +7,17 @@ const openai = new OpenAI({
 
 exports.analyzePlant = async (req, res) => {
   try {
-    const imagePath = req.file.path;
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Image is required",
+      });
+    }
 
     const language =
       req.body.language || "English";
 
-    const imageBuffer =
-      fs.readFileSync(imagePath);
+    const imageBuffer = req.file.buffer;
 
     const base64Image =
       imageBuffer.toString("base64");
@@ -108,10 +111,28 @@ If the plant looks healthy, return:
       response.choices?.[0]?.message
         ?.content || "{}";
 
+    // Remove markdown formatting
     result = result
       .replace(/```json/g, "")
       .replace(/```/g, "")
       .trim();
+
+    // Extract proper JSON only
+    const firstBrace =
+      result.indexOf("{");
+
+    const lastBrace =
+      result.lastIndexOf("}");
+
+    if (
+      firstBrace !== -1 &&
+      lastBrace !== -1
+    ) {
+      result = result.substring(
+        firstBrace,
+        lastBrace + 1,
+      );
+    }
 
     let parsedResult;
 
