@@ -5,6 +5,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/glass_container.dart';
 
@@ -20,11 +21,28 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
 
   XFile? imageFile;
 
-  String diagnosis = "";
+  Map diagnosis = {};
 
   bool loading = false;
 
+  String language = "English";
+
   final picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadLanguage();
+  }
+
+  Future loadLanguage() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      language = prefs.getString("language") ?? "English";
+    });
+  }
 
   Future pickImage() async {
     final picked = await picker.pickImage(source: ImageSource.gallery);
@@ -34,6 +52,8 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
 
       setState(() {
         imageFile = picked;
+
+        diagnosis = {};
       });
     }
   }
@@ -46,6 +66,10 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
     });
 
     try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+
+      String selectedLanguage = prefs.getString("language") ?? "English";
+
       var request = http.MultipartRequest(
         'POST',
 
@@ -53,6 +77,8 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
           "https://ai-farmer-advisory-backend.onrender.com/api/analyze-plant",
         ),
       );
+
+      request.fields["language"] = selectedLanguage;
 
       request.files.add(
         await http.MultipartFile.fromBytes(
@@ -69,7 +95,7 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
       var data = jsonDecode(responseData);
 
       setState(() {
-        diagnosis = data["diagnosis"];
+        diagnosis = data["diagnosis"] ?? {};
 
         loading = false;
       });
@@ -77,7 +103,49 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
       setState(() {
         loading = false;
       });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Failed to analyze plant")));
     }
+  }
+
+  Widget buildResultRow(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+
+        children: [
+          Text(
+            title,
+
+            style: const TextStyle(
+              color: Colors.greenAccent,
+
+              fontSize: 18,
+
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Text(
+            value,
+
+            style: const TextStyle(
+              color: Colors.white,
+
+              fontSize: 16,
+
+              height: 1.7,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -120,10 +188,18 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
 
                         const SizedBox(width: 18),
 
-                        const Text(
-                          "Plant Disease",
+                        Text(
+                          language == "Hindi"
+                              ? "पौधा रोग"
+                              : language == "Punjabi"
+                              ? "ਪੌਦੇ ਦੀ ਬਿਮਾਰੀ"
+                              : language == "Telugu"
+                              ? "మొక్క వ్యాధి"
+                              : language == "Malayalam"
+                              ? "സസ്യ രോഗം"
+                              : "Plant Disease",
 
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
 
                             fontSize: 28,
@@ -182,10 +258,18 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
 
                                       const SizedBox(height: 15),
 
-                                      const Text(
-                                        "No image selected",
+                                      Text(
+                                        language == "Hindi"
+                                            ? "कोई तस्वीर चयनित नहीं"
+                                            : language == "Punjabi"
+                                            ? "ਕੋਈ ਤਸਵੀਰ ਨਹੀਂ ਚੁਣੀ"
+                                            : language == "Telugu"
+                                            ? "చిత్రం ఎంపిక చేయలేదు"
+                                            : language == "Malayalam"
+                                            ? "ചിത്രം തിരഞ്ഞെടുത്തിട്ടില്ല"
+                                            : "No image selected",
 
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.white,
 
                                           fontSize: 16,
@@ -219,10 +303,18 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
                                 color: Colors.white,
                               ),
 
-                              label: const Text(
-                                "Select Leaf Image",
+                              label: Text(
+                                language == "Hindi"
+                                    ? "पत्ती की तस्वीर चुनें"
+                                    : language == "Punjabi"
+                                    ? "ਪੱਤੇ ਦੀ ਤਸਵੀਰ ਚੁਣੋ"
+                                    : language == "Telugu"
+                                    ? "ఆకు చిత్రాన్ని ఎంచుకోండి"
+                                    : language == "Malayalam"
+                                    ? "ഇലയുടെ ചിത്രം തിരഞ്ഞെടുക്കുക"
+                                    : "Select Leaf Image",
 
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.white,
 
                                   fontSize: 16,
@@ -257,10 +349,18 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
                                 color: Colors.white,
                               ),
 
-                              label: const Text(
-                                "Analyze Plant",
+                              label: Text(
+                                language == "Hindi"
+                                    ? "पौधे का विश्लेषण करें"
+                                    : language == "Punjabi"
+                                    ? "ਪੌਦੇ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ ਕਰੋ"
+                                    : language == "Telugu"
+                                    ? "మొక్కను విశ్లేషించండి"
+                                    : language == "Malayalam"
+                                    ? "സസ്യം വിശകലനം ചെയ്യുക"
+                                    : "Analyze Plant",
 
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.white,
 
                                   fontSize: 16,
@@ -288,20 +388,28 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
 
                               children: [
-                                const Row(
+                                Row(
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.medical_services,
 
                                       color: Colors.white,
                                     ),
 
-                                    SizedBox(width: 10),
+                                    const SizedBox(width: 10),
 
                                     Text(
-                                      "Diagnosis Result",
+                                      language == "Hindi"
+                                          ? "विश्लेषण परिणाम"
+                                          : language == "Punjabi"
+                                          ? "ਵਿਸ਼ਲੇਸ਼ਣ ਨਤੀਜਾ"
+                                          : language == "Telugu"
+                                          ? "విశ్లేషణ ఫలితం"
+                                          : language == "Malayalam"
+                                          ? "വിശകലന ഫലം"
+                                          : "Diagnosis Result",
 
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         color: Colors.white,
 
                                         fontSize: 22,
@@ -312,18 +420,62 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
                                   ],
                                 ),
 
-                                const SizedBox(height: 20),
+                                const SizedBox(height: 25),
 
-                                Text(
-                                  diagnosis,
+                                buildResultRow(
+                                  language == "Hindi"
+                                      ? "रोग"
+                                      : language == "Punjabi"
+                                      ? "ਬਿਮਾਰੀ"
+                                      : language == "Telugu"
+                                      ? "వ్యాధి"
+                                      : language == "Malayalam"
+                                      ? "രോഗം"
+                                      : "Disease",
 
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  diagnosis["disease"] ?? "",
+                                ),
 
-                                    fontSize: 16,
+                                buildResultRow(
+                                  language == "Hindi"
+                                      ? "कारण"
+                                      : language == "Punjabi"
+                                      ? "ਕਾਰਣ"
+                                      : language == "Telugu"
+                                      ? "కారణం"
+                                      : language == "Malayalam"
+                                      ? "കാരണം"
+                                      : "Cause",
 
-                                    height: 1.7,
-                                  ),
+                                  diagnosis["cause"] ?? "",
+                                ),
+
+                                buildResultRow(
+                                  language == "Hindi"
+                                      ? "उपचार"
+                                      : language == "Punjabi"
+                                      ? "ਇਲਾਜ"
+                                      : language == "Telugu"
+                                      ? "చికిత్స"
+                                      : language == "Malayalam"
+                                      ? "ചികിത്സ"
+                                      : "Treatment",
+
+                                  diagnosis["treatment"] ?? "",
+                                ),
+
+                                buildResultRow(
+                                  language == "Hindi"
+                                      ? "रोकथाम"
+                                      : language == "Punjabi"
+                                      ? "ਰੋਕਥਾਮ"
+                                      : language == "Telugu"
+                                      ? "నివారణ"
+                                      : language == "Malayalam"
+                                      ? "പ്രതിരോധം"
+                                      : "Prevention",
+
+                                  diagnosis["prevention"] ?? "",
                                 ),
                               ],
                             ),
